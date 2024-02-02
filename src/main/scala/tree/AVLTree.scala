@@ -8,10 +8,10 @@ import model.SelfBalancingTree
  * any node added to the tree will have a balance factor of 0.
  *
  * A direct and interesting implication of this property is that the
- * tree's height grows logarithmically.
+ * tree's computeHeight grows logarithmically.
  *
  * The balance factor is defined as the value of:
- * BF = height(left_subtree) - height(right_subtree)
+ * BF = computeHeight(left_subtree) - computeHeight(right_subtree)
  *
  * When a new node is added to the tree, rebalancing is achieved by
  * rotating the tree.
@@ -20,17 +20,25 @@ import model.SelfBalancingTree
  */
 sealed trait AVLTree[+A] extends SelfBalancingTree[A]
 case object EmptyTree extends AVLTree[Nothing]
-case class Node[A](value: A, left: AVLTree[A], right: AVLTree[A]) extends AVLTree[A]
+case class Node[A](value: A, left: AVLTree[A], right: AVLTree[A], height: Int) extends AVLTree[A]
 
 object AVLTree {
   private def balanceFactor[A](tree: AVLTree[A]): Int = tree match {
     case EmptyTree => 0
-    case Node(_, left, right) => height(left) - height(right)
+    case Node(_,
+      Node(_, _, _, leftHeight),
+      EmptyTree, _) => leftHeight
+    case Node(_,
+      EmptyTree,
+      Node(_, _, _, rightHeight), _) => -rightHeight
+    case Node(_,
+      Node(_, _, _, leftHeight),
+      Node(_, _, _, rightHeight), _) => leftHeight - rightHeight
   }
 
-  private def height[A](tree: AVLTree[A]): Int = tree match {
+  private def computeHeight[A](tree: AVLTree[A]): Int = tree match {
     case EmptyTree => 0
-    case Node(_, left, right) => 1 + math.max(height(left), height(right))
+    case Node(_, left, right, _) => 1 + math.max(computeHeight(left), computeHeight(right))
   }
 
   //     Rotate x - y left      |
@@ -43,23 +51,12 @@ object AVLTree {
   //      c  d    |  b   c      |
   //              |             |
   private def rotateLeft[A](tree: AVLTree[A]): AVLTree[A] = tree match {
-    case Node(pivotValue, left, Node(rightValue, rightLeft, rightRight)) =>
-      Node(rightValue, Node(pivotValue, left, rightLeft), rightRight)
+    case Node(pivotValue, left, Node(rightValue, rightLeft, rightRight, _), _) =>
+      val newHeight = 1 + Math.max(computeHeight(left), computeHeight(rightLeft))
+      val newLeft = Node(pivotValue, left, rightLeft, newHeight)
+      Node(rightValue, newLeft, rightRight, 1 + Math.max(newHeight, computeHeight(rightRight)))
     case _ => EmptyTree
   }
-
-  //  private def rotateRight[A](y: AVLTree[A]): AVLTree[A] = y match {
-  //    case Node(root, Node(leftValue, leftLeft, leftRight, _), right, _) => {
-  //      val newHeight = 1 + Math.max(height(leftRight), height(right))
-  //      Node(
-  //        leftValue,
-  //        leftLeft,
-  //        Node(root, leftRight, right, newHeight),
-  //        1 + Math.max(newHeight, height(leftLeft))
-  //      )
-  //    }
-  //    case _ => EmptyTree
-  //  }
 
   //     Rotate x - y right      |
   //         a    |       a      |
@@ -71,8 +68,10 @@ object AVLTree {
   //   b   c      |      c  d    |
   //              |              |
   private def rotateRight[A](tree: AVLTree[A]): AVLTree[A] = tree match {
-    case Node(pivotValue, Node(leftValue, leftLeft, leftRight), right) =>
-      Node(leftValue, leftLeft, Node(pivotValue, leftRight, right))
+    case Node(pivotValue, Node(leftValue, leftLeft, leftRight, _), right, _) =>
+      val newHeight = 1 + Math.max(computeHeight(right), computeHeight(leftRight))
+      val newRight = Node(pivotValue, leftRight, right, newHeight)
+      Node(leftValue, leftLeft, newRight, 1 + Math.max(newHeight, computeHeight(leftLeft)))
     case _ => EmptyTree
   }
 
@@ -89,10 +88,11 @@ object AVLTree {
   //        d   e        |   c   d           |                    |
   //                     |                   |                    |
   private def rotateLeftRight[A](tree: AVLTree[A]): AVLTree[A] = tree match {
-    case Node(rootValue, left, right) => {
+    case Node(rootValue, left, right, height) => {
       val tmpRoot = rotateLeft(left)
       rotateRight(
-        Node(rootValue, tmpRoot, right)
+        // height does not matter. it will be updated shortly.
+        Node(rootValue, tmpRoot, right, height)
       )
     }
     case _ => EmptyTree
@@ -110,10 +110,10 @@ object AVLTree {
   //        d   e        |           d   c    |                   |                          |
   //                     |                    |                   |
   private def rotateRightLeft[A](tree: AVLTree[A]): AVLTree[A] = tree match {
-    case Node(rootValue, left, right) => {
+    case Node(rootValue, left, right, height) => {
       val tmpRoot = rotateRight(right)
       rotateLeft(
-        Node(rootValue, left, tmpRoot)
+        Node(rootValue, left, tmpRoot, height)
       )
     }
     case _ => EmptyTree
@@ -135,29 +135,29 @@ object AVLTree {
    * @return
    */
   def insert[A](tree: AVLTree[A], newValue: A)(implicit ord: Ordering[A]): AVLTree[A] = tree match {
-    case pNode@Node(pValue, left, right) => {
+    case pNode@Node(pValue, left, right, _) => {
       val res = ord.compare(pValue, newValue)
 
       if (res == -1) {
         val newRight = insert(right, newValue)(ord)
-        val newTree = Node(pValue, left, newRight)
+        val newTree = Node(pValue, left, newRight, 1 + Math.max(computeHeight(left), computeHeight(newRight)))
         balance(newTree)(ord)
       } else if (res == 1) {
         val newLeft = insert(left, newValue)(ord)
-        val newTree = Node(pValue, newLeft, right)
+        val newTree = Node(pValue, newLeft, right, 1 + Math.max(computeHeight(newLeft), computeHeight(right)))
         balance(newTree)(ord)
       } else {
         pNode
       }
     }
-    case _ => Node(newValue, EmptyTree, EmptyTree)
+    case _ => Node(newValue, EmptyTree, EmptyTree, 1)
   }
 
   // Print the AVL Tree in-order
   def printTree[A](tree: AVLTree[A]): Unit = tree match {
     case EmptyTree =>
-    case Node(value, left, right) =>
-      println(value)
+    case Node(value, left, right, height) =>
+      println(s"${value} ${height}")
       printTree(left)
       printTree(right)
   }
@@ -171,7 +171,7 @@ object AVLTree {
    */
   private def balance[A](tree: AVLTree[A])(implicit ord: Ordering[A]): AVLTree[A] = tree match {
     case EmptyTree => EmptyTree
-    case node@Node(value, left, right) => {
+    case node@Node(value, left, right, _) => {
       val bf = balanceFactor(tree)
 
       if (bf > 1) /* left tree is dominant */ {
