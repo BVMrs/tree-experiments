@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3.js Scatterplot</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+</head>
+<body>
+
+<script>
+    // Define function to parse the schema and extract data
+    function processLine(line) {
+        const pairs = line.split('|');
+        const data = {};
+        for (const pair of pairs) {
+            const [key, value] = pair.split('=');
+            data[key] = parseFloat(value);
+        }
+        return data;
+    }
+
+    // Load data from two files
+    d3.text("../resources/test_optimized").then(function(data1) {
+        d3.text("../resources/test_unoptimized").then(function(data2) {
+            // Parse data from the files
+            const parsedData1 = data1.trim().split('\n').map(processLine);
+            const parsedData2 = data2.trim().split('\n').map(processLine);
+
+            // Set up the line graph dimensions
+            const width = 600;
+            const height = 400;
+            const margin = { top: 20, right: 20, bottom: 50, left: 50 };
+
+            // Create the SVG element
+            const svg = d3.select("body").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            // Set up scales
+            const xScale = d3.scaleLinear()
+                .domain([0, d3.max(parsedData1.concat(parsedData2), d => d.ti)])
+                .range([0, width]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(parsedData1.concat(parsedData2), d => d.ips)])
+                .range([height, 0]);
+
+            // Define line function
+            const line = d3.line()
+                .x(d => xScale(d.ti))
+                .y(d => yScale(d.ips));
+
+            // Draw line for file 1
+            svg.append("path")
+                .data([parsedData1])
+                .attr("class", "line file1")
+                .attr("d", line)
+                .style("stroke", "blue")
+                .style("fill", "none");
+
+            // Draw line for file 2
+            svg.append("path")
+                .data([parsedData2])
+                .attr("class", "line file2")
+                .attr("d", line)
+                .style("stroke", "red")
+                .style("fill", "none");
+
+            // Add axes
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(xScale));
+
+            svg.append("g")
+                .call(d3.axisLeft(yScale));
+
+            // Add labels
+            svg.append("text")
+                .attr("transform", "translate(" + (width / 2) + " ," + (height + margin.top + 20) + ")")
+                .style("text-anchor", "middle")
+                .text("ti");
+
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 0 - margin.left)
+                .attr("x", 0 - (height / 2))
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .text("ips");
+        });
+    });
+</script>
+
+</body>
+</html>
