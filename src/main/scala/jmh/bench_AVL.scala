@@ -20,8 +20,8 @@ class bench_AVL {
     //    avlTree = AVLTree.insert(avlTree, 12)
     //    avlTree = AVLTree.insert(avlTree, 11)
     var avlTree: AVLTree[Double] = EmptyTree
-    for (i <- 0 to 1_000_000) {
-      val value = Math.random() * 100_000_000
+    for (i <- 0 to 100_000) {
+      val value = Math.random() * 1_000_000
       avlTree = AVLTree.insert(avlTree, value)
     }
   }

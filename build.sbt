@@ -10,7 +10,8 @@ lazy val root = (project in file("."))
     name := "scala-zio-playground",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % "2.0.19",
-      "dev.zio" %% "zio-test" % "2.0.19" % Test
+      "dev.zio" %% "zio-test" % "2.0.19" % Test,
+      "org.foundationdb" % "fdb-java" % "7.3.31"
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   )

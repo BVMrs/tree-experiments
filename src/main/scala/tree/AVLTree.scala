@@ -85,7 +85,17 @@ object AVLTree {
     case _ => Node(newValue, EmptyTree, EmptyTree, 1)
   }
 
-  def delete[A](tree: AVLTree[A]) = ???
+  def delete[A](tree: AVLTree[A]): Unit = ???
+
+  /**
+   * Pass through all the nodes and apply an operation on each.
+   *
+   * @param tree - root node of the tree (or a subtree)
+   * @param op - operation that will be applied on each element of the tree
+   *             defined by the other parameter
+   * @tparam A
+   */
+  def traverse[A, B](tree: AVLTree[A], op: A => Unit): AVLTree[A] = ???
 
   /**
    * Print the AVL Tree in-order
@@ -112,7 +122,7 @@ object AVLTree {
    */
   private def balance[A](tree: AVLTree[A])(implicit ord: Ordering[A]): AVLTree[A] = tree match {
     case EmptyTree => EmptyTree
-    case node @ Node(value, left, right, _) => {
+    case node @ Node(_, left, right, _) => {
       val bf = balanceFactor(tree)
 
       if (bf > 1) /* left tree is dominant */ {
